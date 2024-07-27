@@ -1,0 +1,3 @@
+[submodule "kn"]
+	path = kn
+	url = git@github.com:luihabl/kn.git
