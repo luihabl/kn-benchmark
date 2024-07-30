@@ -9,6 +9,8 @@ add_subdirectory(kn)
 
 project(kn-benchmark)
 
+CPMAddPackage("gh:d99kris/rapidcsv@8.83")
+
 add_executable(kn-benchmark src/main.cpp)
 
-target_link_libraries(kn-benchmark PUBLIC kn::kn)
+target_link_libraries(kn-benchmark PUBLIC kn::kn rapidcsv)
