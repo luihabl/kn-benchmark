@@ -16,6 +16,6 @@ dx = L / 128
 c = rho * L / (2 * eps)
 phi = c * x - rho * x**2 / (2 * eps)
 
-plt.plot(np.gradient(phi, dx))
+# plt.plot(np.gradient(phi, dx))
 
 plt.show()
