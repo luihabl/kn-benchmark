@@ -11,6 +11,27 @@
 #include "kn/spatial/grid.h"
 #include "rapidcsv.h"
 #include <fstream>
+#include <vector>
+
+void save_vec(const char* filename, const std::vector<double>& v) {
+    std::ofstream outf (filename);
+
+    for (size_t i = 0; i < v.size(); i++) 
+    { 
+        if (i!=0) { outf << "\n"; } 
+        outf << v[i]; 
+    }
+}
+
+void save_vec(const char* filename, const std::vector<kn::particle::ChargedSpecies1D3V::Vec3>& v) {
+    std::ofstream outf (filename);
+
+    for (size_t i = 0; i < v.size(); i++) 
+    { 
+        if (i!=0) { outf << "\n"; } 
+        outf << v[i].x << "," << v[i].y << "," << v[i].z; 
+    }
+}
 
 kn::collisions::MonteCarloCollisions::CollisionReaction load_reaction(const char* path, double energy_threshold) {
     
@@ -38,7 +59,7 @@ auto maxwellian_emitter(double t, double l, double m) {
 
 int main() {
 
-    kn::random::initialize(42);
+    kn::random::initialize(45);
 
     size_t nx = 129;
     double f = 13.56e6;
@@ -54,7 +75,7 @@ int main() {
     double volt = 450.0;
     size_t ppc = 512;
     size_t n_steps = 512'000;
-    double particle_weight = n0 * l / (double)(ppc * nx);
+    double pweight = n0 * l / (double)(ppc * (nx - 1));
 
     kn::collisions::MonteCarloCollisions::DomainConfig coll_config;
     coll_config.m_dt = dt;
@@ -99,12 +120,12 @@ int main() {
 
     std::cout << "starting" << std::endl;
 
-    for(size_t i = 0; i < 1000; i++) {
+    for(size_t i = 0; i < n_steps; i++) {
         
         kn::interpolate::weight_to_grid(electrons, electron_density);
         kn::interpolate::weight_to_grid(ions, ion_density);
         
-        kn::electromagnetics::charge_density(particle_weight, ion_density, electron_density, rho);
+        kn::electromagnetics::charge_density(pweight, ion_density, electron_density, rho);
 
         double vc = volt * std::sin(2.0 * kn::constants::pi * f * dt * (double) i);
 
@@ -121,13 +142,32 @@ int main() {
         kn::particle::apply_absorbing_boundary(ions, 0, l);
 
         // coll.collide_electrons(electrons, ions);
-        // coll.collide_ions(ions);
+        coll.collide_ions(ions);
 
-        if(i % 10 == 0) {
+        // if(i > 50) {
+        //     save_vec("pos_e.txt", std::vector<double>(electrons.x(), electrons.x() + electrons.n()));
+        //     save_vec("v_e.txt", std::vector<kn::particle::ChargedSpecies1D3V::Vec3>(electrons.v(), electrons.v() + electrons.n()));
+        //     save_vec("v_i.txt", std::vector<kn::particle::ChargedSpecies1D3V::Vec3>(ions.v(), ions.v() + ions.n()));
+        //     save_vec("pos_i.txt", std::vector<double>(ions.x(), ions.x() + ions.n()));
+        //     save_vec("field_e.txt", std::vector<double>(electrons.f(), electrons.f() + electrons.n()));
+        //     save_vec("field_i.txt", std::vector<double>(ions.f(), ions.f() + ions.n()));
+        //     save_vec("density_e.txt", electron_density.data());
+        //     save_vec("density_i.txt", ion_density.data());
+        //     save_vec("rho.txt", rho.data());
+        //     save_vec("phi.txt", phi.data());
+        //     save_vec("efield.txt", efield.data());
+        // return 0;
+
+        // }
+        
+
+        if(i % 1000 == 0) {
             std::cout << "--" << std::endl;
             std::cout << "i: " << i << std::endl;
-            std::cout << "electrons: " << electrons.n() << std::endl;
-            std::cout << "ions: " << ions.n() << std::endl << std::endl;
+            // std::cout << "electrons: " << electrons.n() << std::endl;
+            // std::cout << "ions: " << ions.n() << std::endl << std::endl;
+
+            printf("e: %.2f\t i: %.2f\n", (double) electrons.n() / (double) n_initial, (double) ions.n() / (double) n_initial);
         }
     }
 
@@ -142,13 +182,13 @@ int main() {
     // auto efield = std::vector<double>(nx);
     // solver.efield(phi, efield);
 
-    std::ofstream outf ("output.txt");
+    // std::ofstream outf ("output.txt");
 
-    for (size_t i = 0; i < phi.n(); i++) 
-    { 
-        if (i!=0) { outf << "\n"; } 
-        outf << phi.data()[i]; 
-    }
+    // for (size_t i = 0; i < phi.n(); i++) 
+    // { 
+    //     if (i!=0) { outf << "\n"; } 
+    //     outf << phi.data()[i]; 
+    // }
 
     return 0;
 }
