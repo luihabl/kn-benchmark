@@ -23,7 +23,7 @@ void save_vec(const char* filename, const std::vector<double>& v) {
     }
 }
 
-void save_vec(const char* filename, const std::vector<kn::particle::ChargedSpecies1D3V::Vec3>& v) {
+void save_vec(const char* filename, const std::vector<kn::core::Vec3>& v) {
     std::ofstream outf (filename);
 
     for (size_t i = 0; i < v.size(); i++) 
@@ -33,7 +33,7 @@ void save_vec(const char* filename, const std::vector<kn::particle::ChargedSpeci
     }
 }
 
-kn::collisions::MonteCarloCollisions::CollisionReaction load_reaction(const char* path, double energy_threshold) {
+kn::collisions::MonteCarloCollisions::CollisionReaction load_reaction(const char* path, double energy_threshold, kn::collisions::MonteCarloCollisions::CollisionType ctype, kn::collisions::MonteCarloCollisions::CollisionProjectile projectile) {
     
     kn::collisions::MonteCarloCollisions::CollisionReaction coll;
 
@@ -41,12 +41,14 @@ kn::collisions::MonteCarloCollisions::CollisionReaction load_reaction(const char
     coll.energy = doc.GetColumn<double>(0);
     coll.cross_section = doc.GetColumn<double>(1);
     coll.energy_threshold = energy_threshold;
+    coll.projectile = projectile;
+    coll.type = ctype;
 
     return coll;
 }
 
 auto maxwellian_emitter(double t, double l, double m) {
-    return [l, t, m](kn::particle::ChargedSpecies1D3V::Vec3& v, double& x){
+    return [l, t, m](kn::core::Vec3& v, double& x){
         x = l * kn::random::uniform();
         double vth = std::sqrt(kn::constants::kb * t / m);
         v = { 
@@ -59,7 +61,7 @@ auto maxwellian_emitter(double t, double l, double m) {
 
 int main() {
 
-    kn::random::initialize(45);
+    kn::random::initialize(500);
 
     size_t nx = 129;
     double f = 13.56e6;
@@ -84,22 +86,26 @@ int main() {
     coll_config.m_t_neutral = tg;
     coll_config.m_m_ion = m_he;
 
-    auto el_cs = load_reaction("../data/Elastic_He.csv", 0.0);
-    auto exc_cs = std::vector<kn::collisions::MonteCarloCollisions::CollisionReaction>{
-        load_reaction("../data/Excitation1_He.csv", 19.82),
-        load_reaction("../data/Excitation2_He.csv", 20.61)
-    };
-    auto iz_cs = load_reaction("../data/Ionization_He.csv", 24.59);
-    auto iso_cs = load_reaction("../data/Isotropic_He.csv", 0.0);
-    auto bs_cs = load_reaction("../data/Backscattering_He.csv", 0.0);
+    using CType = kn::collisions::MonteCarloCollisions::CollisionType;
+    using CProj = kn::collisions::MonteCarloCollisions::CollisionProjectile;
+
+    auto el_cs = load_reaction("../data/Elastic_He.csv", 0.0, CType::Elastic, CProj::Electron);
+    auto exc1_cs = load_reaction("../data/Excitation1_He.csv", 19.82, CType::Excitation, CProj::Electron);
+    auto exc2_cs = load_reaction("../data/Excitation2_He.csv", 20.61, CType::Excitation, CProj::Electron);
+    auto iz_cs = load_reaction("../data/Ionization_He.csv", 24.59, CType::Ionization, CProj::Electron);
+    auto iso_cs = load_reaction("../data/Isotropic_He.csv", 0.0, CType::Isotropic, CProj::Ion);
+    auto bs_cs = load_reaction("../data/Backscattering_He.csv", 0.0, CType::Backscattering, CProj::Ion);
 
     auto coll = kn::collisions::MonteCarloCollisions(
         coll_config,
-        std::move(el_cs),
-        std::move(exc_cs),
-        std::move(iz_cs),
-        std::move(iso_cs),
-        std::move(bs_cs)
+        {
+            std::move(bs_cs),
+            std::move(exc2_cs),
+            std::move(iz_cs),
+            std::move(iso_cs),
+            std::move(exc1_cs),
+            std::move(el_cs),
+        }
     );
 
     size_t n_initial = (nx - 1) * ppc;
@@ -111,7 +117,9 @@ int main() {
     ions.add(n_initial, maxwellian_emitter(ti, l, m_he));
 
     auto electron_density = kn::spatial::UniformGrid(l, nx);
+    auto av_electron_density = kn::spatial::AverageGrid(electron_density);
     auto ion_density = kn::spatial::UniformGrid(l, nx);
+    auto av_ion_density = kn::spatial::AverageGrid(ion_density);
     auto rho = kn::spatial::UniformGrid(l, nx);
 
     auto poisson_solver = kn::electromagnetics::DirichletPoissonSolver(nx, dx);
@@ -141,13 +149,18 @@ int main() {
         kn::particle::apply_absorbing_boundary(electrons, 0, l);
         kn::particle::apply_absorbing_boundary(ions, 0, l);
 
-        // coll.collide_electrons(electrons, ions);
+        coll.collide_electrons(electrons, ions);
         coll.collide_ions(ions);
+
+        if(i > (n_steps - 12'800)) {
+            av_electron_density.add(electron_density);
+            av_ion_density.add(ion_density);
+        }
 
         // if(i > 50) {
         //     save_vec("pos_e.txt", std::vector<double>(electrons.x(), electrons.x() + electrons.n()));
-        //     save_vec("v_e.txt", std::vector<kn::particle::ChargedSpecies1D3V::Vec3>(electrons.v(), electrons.v() + electrons.n()));
-        //     save_vec("v_i.txt", std::vector<kn::particle::ChargedSpecies1D3V::Vec3>(ions.v(), ions.v() + ions.n()));
+        //     save_vec("v_e.txt", std::vector<kn::core::Vec3>(electrons.v(), electrons.v() + electrons.n()));
+        //     save_vec("v_i.txt", std::vector<kn::core::Vec3>(ions.v(), ions.v() + ions.n()));
         //     save_vec("pos_i.txt", std::vector<double>(ions.x(), ions.x() + ions.n()));
         //     save_vec("field_e.txt", std::vector<double>(electrons.f(), electrons.f() + electrons.n()));
         //     save_vec("field_i.txt", std::vector<double>(ions.f(), ions.f() + ions.n()));
@@ -170,6 +183,18 @@ int main() {
             printf("e: %.2f\t i: %.2f\n", (double) electrons.n() / (double) n_initial, (double) ions.n() / (double) n_initial);
         }
     }
+
+    save_vec("pos_e.txt", std::vector<double>(electrons.x(), electrons.x() + electrons.n()));
+    save_vec("v_e.txt", std::vector<kn::core::Vec3>(electrons.v(), electrons.v() + electrons.n()));
+    save_vec("v_i.txt", std::vector<kn::core::Vec3>(ions.v(), ions.v() + ions.n()));
+    save_vec("pos_i.txt", std::vector<double>(ions.x(), ions.x() + ions.n()));
+    save_vec("field_e.txt", std::vector<double>(electrons.f(), electrons.f() + electrons.n()));
+    save_vec("field_i.txt", std::vector<double>(ions.f(), ions.f() + ions.n()));
+    save_vec("density_e.txt", av_electron_density.get());
+    save_vec("density_i.txt", av_ion_density.get());
+    save_vec("rho.txt", rho.data());
+    save_vec("phi.txt", phi.data());
+    save_vec("efield.txt", efield.data());
 
 
     // auto solver = kn::electromagnetics::DirichletPoissonSolver(nx, dx);

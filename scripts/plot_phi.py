@@ -55,9 +55,15 @@ rho = np.genfromtxt("build/rho.txt")
 phi = np.genfromtxt("build/phi.txt")
 ef = np.genfromtxt("build/efield.txt")
 
+data_a = np.genfromtxt("data/Benchmark_A.csv", delimiter=' ')
+
+print(data_a)
+
 density_i = density(pos_i, nx)
 density_e = density(pos_e, nx)
 rho_local = e * (density_i - density_e)
+
+x = np.linspace(0, L, density_i.size)
 
 # ke_e = 0.5 * m_e * (v_e[:, 0]**2 + v_e[:, 1]**2 + v_e[0, 2]**2) / e
 # print(np.mean(ke_e))
@@ -72,10 +78,14 @@ rho_local = e * (density_i - density_e)
 
 # plt.hist(ke_i, bins=1000)
 
+xb = data_a[:, 0]
+density_e_b = data_a[:, 1]
+density_i_b = data_a[:, 4]
+plt.plot(xb, density_e_b, ls='--')
+plt.plot(xb, density_i_b, ls='--')
 
-plt.plot(density_i)
-plt.plot(count2dens(di, nx))
-# plt.plot(count2dens(de, nx))
+plt.plot(x, count2dens(di, nx))
+plt.plot(x, count2dens(de, nx))
 
 # plt.plot(rho_local)
 # plt.plot(rho)
