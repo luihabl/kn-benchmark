@@ -44,9 +44,9 @@ void save_vec(const char* filename, const std::vector<kn::core::Vec<1>>& v) {
     }
 }
 
-kn::collisions::MonteCarloCollisions::CollisionReaction load_reaction(const char* path, double energy_threshold, kn::collisions::MonteCarloCollisions::CollisionType ctype, kn::collisions::MonteCarloCollisions::CollisionProjectile projectile) {
+kn::collisions::CollisionReaction load_reaction(const char* path, double energy_threshold, kn::collisions::CollisionType ctype, kn::collisions::CollisionProjectile projectile) {
     
-    kn::collisions::MonteCarloCollisions::CollisionReaction coll;
+    kn::collisions::CollisionReaction coll;
 
     rapidcsv::Document doc(path, rapidcsv::LabelParams(-1, -1), rapidcsv::SeparatorParams(';'));
     coll.energy = doc.GetColumn<double>(0);
@@ -90,15 +90,15 @@ int main() {
     size_t n_steps = 512'000;
     double pweight = n0 * l / (double)(ppc * (nx - 1));
 
-    kn::collisions::MonteCarloCollisions::DomainConfig coll_config;
+    kn::collisions::DomainConfig coll_config;
     coll_config.m_dt = dt;
     coll_config.m_m_dx = dx;
     coll_config.m_n_neutral = ng;
     coll_config.m_t_neutral = tg;
     coll_config.m_m_ion = m_he;
 
-    using CType = kn::collisions::MonteCarloCollisions::CollisionType;
-    using CProj = kn::collisions::MonteCarloCollisions::CollisionProjectile;
+    using CType = kn::collisions::CollisionType;
+    using CProj = kn::collisions::CollisionProjectile;
 
     auto el_cs = load_reaction("../data/Elastic_He.csv", 0.0, CType::Elastic, CProj::Electron);
     auto exc1_cs = load_reaction("../data/Excitation1_He.csv", 19.82, CType::Excitation, CProj::Electron);
@@ -107,7 +107,7 @@ int main() {
     auto iso_cs = load_reaction("../data/Isotropic_He.csv", 0.0, CType::Isotropic, CProj::Ion);
     auto bs_cs = load_reaction("../data/Backscattering_He.csv", 0.0, CType::Backscattering, CProj::Ion);
 
-    auto coll = kn::collisions::MonteCarloCollisions(
+    auto coll = kn::collisions::MonteCarloCollisions<1>(
         coll_config,
         {
             std::move(bs_cs),
