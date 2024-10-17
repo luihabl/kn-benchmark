@@ -1,6 +1,7 @@
 #include <iostream>
 #include "kn/collisions/mcc.h"
 #include "kn/constants/constants.h"
+#include "kn/core/vec.h"
 #include "kn/electromagnetics/poisson.h"
 #include "kn/interpolate/field.h"
 #include "kn/interpolate/weight.h"
@@ -23,13 +24,23 @@ void save_vec(const char* filename, const std::vector<double>& v) {
     }
 }
 
-void save_vec(const char* filename, const std::vector<kn::core::Vec3>& v) {
+void save_vec(const char* filename, const std::vector<kn::core::Vec<3>>& v) {
     std::ofstream outf (filename);
 
     for (size_t i = 0; i < v.size(); i++) 
     { 
         if (i!=0) { outf << "\n"; } 
         outf << v[i].x << "," << v[i].y << "," << v[i].z; 
+    }
+}
+
+void save_vec(const char* filename, const std::vector<kn::core::Vec<1>>& v) {
+    std::ofstream outf (filename);
+
+    for (size_t i = 0; i < v.size(); i++) 
+    { 
+        if (i!=0) { outf << "\n"; } 
+        outf << v[i].x; 
     }
 }
 
@@ -48,8 +59,8 @@ kn::collisions::MonteCarloCollisions::CollisionReaction load_reaction(const char
 }
 
 auto maxwellian_emitter(double t, double l, double m) {
-    return [l, t, m](kn::core::Vec3& v, double& x){
-        x = l * kn::random::uniform();
+    return [l, t, m](kn::core::Vec<3>& v, kn::core::Vec<1>& x){
+        x.x = l * kn::random::uniform();
         double vth = std::sqrt(kn::constants::kb * t / m);
         v = { 
             kn::random::normal(0.0, vth),
@@ -110,10 +121,10 @@ int main() {
 
     size_t n_initial = (nx - 1) * ppc;
     
-    auto electrons = kn::particle::ChargedSpecies1D3V(-kn::constants::e, kn::constants::m_e);
+    auto electrons = kn::particle::ChargedSpecies<1, 3>(-kn::constants::e, kn::constants::m_e);
     electrons.add(n_initial, maxwellian_emitter(te, l, kn::constants::m_e));
     
-    auto ions = kn::particle::ChargedSpecies1D3V(kn::constants::e, m_he);
+    auto ions = kn::particle::ChargedSpecies<1, 3>(kn::constants::e, m_he);
     ions.add(n_initial, maxwellian_emitter(ti, l, m_he));
 
     auto electron_density = kn::spatial::UniformGrid(l, nx);
@@ -184,12 +195,12 @@ int main() {
         }
     }
 
-    save_vec("pos_e.txt", std::vector<double>(electrons.x(), electrons.x() + electrons.n()));
-    save_vec("v_e.txt", std::vector<kn::core::Vec3>(electrons.v(), electrons.v() + electrons.n()));
-    save_vec("v_i.txt", std::vector<kn::core::Vec3>(ions.v(), ions.v() + ions.n()));
-    save_vec("pos_i.txt", std::vector<double>(ions.x(), ions.x() + ions.n()));
-    save_vec("field_e.txt", std::vector<double>(electrons.f(), electrons.f() + electrons.n()));
-    save_vec("field_i.txt", std::vector<double>(ions.f(), ions.f() + ions.n()));
+    save_vec("pos_e.txt", std::vector<kn::core::Vec<1>>(electrons.x(), electrons.x() + electrons.n()));
+    save_vec("v_e.txt", std::vector<kn::core::Vec<3>>(electrons.v(), electrons.v() + electrons.n()));
+    save_vec("v_i.txt", std::vector<kn::core::Vec<3>>(ions.v(), ions.v() + ions.n()));
+    save_vec("pos_i.txt", std::vector<kn::core::Vec<1>>(ions.x(), ions.x() + ions.n()));
+    save_vec("field_e.txt", std::vector<kn::core::Vec<1>>(electrons.f(), electrons.f() + electrons.n()));
+    save_vec("field_i.txt", std::vector<kn::core::Vec<1>>(ions.f(), ions.f() + ions.n()));
     save_vec("density_e.txt", av_electron_density.get());
     save_vec("density_i.txt", av_ion_density.get());
     save_vec("rho.txt", rho.data());
