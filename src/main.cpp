@@ -13,8 +13,9 @@
 #include "rapidcsv.h"
 #include <fstream>
 #include <vector>
+#include <span>
 
-void save_vec(const char* filename, const std::vector<double>& v) {
+void save_vec(const char* filename, const std::span<double>& v) {
     std::ofstream outf (filename);
 
     for (size_t i = 0; i < v.size(); i++) 
@@ -24,7 +25,7 @@ void save_vec(const char* filename, const std::vector<double>& v) {
     }
 }
 
-void save_vec(const char* filename, const std::vector<kn::core::Vec<3>>& v) {
+void save_vec(const char* filename, const std::span<kn::core::Vec<3>>& v) {
     std::ofstream outf (filename);
 
     for (size_t i = 0; i < v.size(); i++) 
@@ -34,7 +35,7 @@ void save_vec(const char* filename, const std::vector<kn::core::Vec<3>>& v) {
     }
 }
 
-void save_vec(const char* filename, const std::vector<kn::core::Vec<1>>& v) {
+void save_vec(const char* filename, const std::span<kn::core::Vec<1>>& v) {
     std::ofstream outf (filename);
 
     for (size_t i = 0; i < v.size(); i++) 
@@ -195,12 +196,12 @@ int main() {
         }
     }
 
-    save_vec("pos_e.txt", std::vector<kn::core::Vec<1>>(electrons.x(), electrons.x() + electrons.n()));
-    save_vec("v_e.txt", std::vector<kn::core::Vec<3>>(electrons.v(), electrons.v() + electrons.n()));
-    save_vec("v_i.txt", std::vector<kn::core::Vec<3>>(ions.v(), ions.v() + ions.n()));
-    save_vec("pos_i.txt", std::vector<kn::core::Vec<1>>(ions.x(), ions.x() + ions.n()));
-    save_vec("field_e.txt", std::vector<kn::core::Vec<1>>(electrons.f(), electrons.f() + electrons.n()));
-    save_vec("field_i.txt", std::vector<kn::core::Vec<1>>(ions.f(), ions.f() + ions.n()));
+    save_vec("pos_e.txt", std::span<kn::core::Vec<1>>(electrons.x(), electrons.n()));
+    save_vec("v_e.txt", std::span<kn::core::Vec<3>>(electrons.v(), + electrons.n()));
+    save_vec("v_i.txt", std::span<kn::core::Vec<3>>(ions.v(), ions.n()));
+    save_vec("pos_i.txt", std::span<kn::core::Vec<1>>(ions.x(), ions.n()));
+    save_vec("field_e.txt", std::span<kn::core::Vec<1>>(electrons.f(), electrons.n()));
+    save_vec("field_i.txt", std::span<kn::core::Vec<1>>(ions.f(),ions.n()));
     save_vec("density_e.txt", av_electron_density.get());
     save_vec("density_i.txt", av_ion_density.get());
     save_vec("rho.txt", rho.data());
