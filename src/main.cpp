@@ -1,5 +1,8 @@
 #include <iostream>
 #include "kn/collisions/mcc.h"
+#include "kn/collisions/reaction.h"
+#include "kn/collisions/reactions/he_reactions.h"
+#include "kn/collisions/target.h"
 #include "kn/constants/constants.h"
 #include "kn/core/vec.h"
 #include "kn/electromagnetics/poisson.h"
@@ -12,6 +15,7 @@
 #include "kn/spatial/grid.h"
 #include "rapidcsv.h"
 #include <fstream>
+#include <memory>
 #include <vector>
 #include <span>
 
@@ -57,6 +61,17 @@ kn::collisions::CollisionReaction load_reaction(const char* path, double energy_
     coll.type = ctype;
 
     return coll;
+}
+
+kn::collisions::CrossSection load_cross_section(const char* path, double energy_threshold) {
+
+    kn::collisions::CrossSection cs;
+    rapidcsv::Document doc(path, rapidcsv::LabelParams(-1, -1), rapidcsv::SeparatorParams(';'));
+    cs.energy = doc.GetColumn<double>(0);
+    cs.cross_section = doc.GetColumn<double>(1);
+    cs.threshold = energy_threshold;
+
+    return cs;
 }
 
 auto maxwellian_emitter(double t, double l, double m) {
@@ -124,7 +139,6 @@ int main() {
     
     auto electrons = kn::particle::ChargedSpecies<1, 3>(-kn::constants::e, kn::constants::m_e);
     electrons.add(n_initial, maxwellian_emitter(te, l, kn::constants::m_e));
-    
     auto ions = kn::particle::ChargedSpecies<1, 3>(kn::constants::e, m_he);
     ions.add(n_initial, maxwellian_emitter(ti, l, m_he));
 
@@ -138,6 +152,41 @@ int main() {
     auto phi = kn::spatial::UniformGrid(l, nx);
     auto efield = kn::spatial::UniformGrid(l, nx);
 
+
+
+    kn::collisions::Reactions<1, 3> reactions;
+    reactions.push_back(std::make_unique<kn::collisions::reactions::HeElectronIonElasticCollision<1, 3>>(
+        kn::collisions::reactions::HeCollisionConfig{m_he},
+        load_cross_section("../data/Elastic_He.csv", 0.0)
+    ));
+
+    reactions.push_back(std::make_unique<kn::collisions::reactions::HeElectronIonExcitationCollision<1, 3>>(
+        kn::collisions::reactions::HeCollisionConfig{m_he},
+        load_cross_section("../data/Excitation1_He.csv", 19.82)
+    ));
+    
+    reactions.push_back(std::make_unique<kn::collisions::reactions::HeElectronIonExcitationCollision<1, 3>>(
+        kn::collisions::reactions::HeCollisionConfig{m_he},
+        load_cross_section("../data/Excitation2_He.csv", 20.61)
+    ));
+
+    reactions.push_back(std::make_unique<kn::collisions::reactions::HeElectronIonIonizationCollision<1, 3>>(
+        ions,
+        kn::collisions::reactions::HeCollisionConfig{m_he},
+        load_cross_section("../data/Excitation2_He.csv", 20.61)
+    ));
+
+
+    kn::collisions::ReactionConfig<1, 3> rconfig {
+        dt, dx, 
+        std::make_unique<kn::collisions::StaticUniformTarget<1, 3>>(ng, tg), 
+        std::move(reactions),
+        kn::collisions::RelativeDynamics::FastProjectile
+    };
+
+    auto coll2 = kn::collisions::MCCReactionSet<1, 3>(electrons, std::move(rconfig));
+
+    
     std::cout << "starting" << std::endl;
 
     for(size_t i = 0; i < n_steps; i++) {
@@ -161,7 +210,8 @@ int main() {
         kn::particle::apply_absorbing_boundary(electrons, 0, l);
         kn::particle::apply_absorbing_boundary(ions, 0, l);
 
-        coll.collide_electrons(electrons, ions);
+        // coll.collide_electrons(electrons, ions);
+        coll2.react_all();
         coll.collide_ions(ions);
 
         if(i > (n_steps - 12'800)) {
