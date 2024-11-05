@@ -42,18 +42,18 @@ def calc_phi(rho):
 
     return np.concatenate(([0.0], res, [0.0]))
 
-pos_e = np.genfromtxt("build/pos_e.txt")
-v_e = np.genfromtxt("build/v_e.txt", delimiter=',')
-field_e = np.genfromtxt("build/field_e.txt")
-field_i = np.genfromtxt("build/field_i.txt")
-pos_i = np.genfromtxt("build/pos_i.txt")
-v_i = np.genfromtxt("build/v_i.txt", delimiter=',')
-de = np.genfromtxt("build/density_e.txt")
-di = np.genfromtxt("build/density_i.txt")
-rho = np.genfromtxt("build/rho.txt")
+pos_e = np.genfromtxt("build_release/pos_e.txt")
+v_e = np.genfromtxt("build_release/v_e.txt", delimiter=',')
+field_e = np.genfromtxt("build_release/field_e.txt")
+field_i = np.genfromtxt("build_release/field_i.txt")
+pos_i = np.genfromtxt("build_release/pos_i.txt")
+v_i = np.genfromtxt("build_release/v_i.txt", delimiter=',')
+de = np.genfromtxt("build_release/density_e.txt")
+di = np.genfromtxt("build_release/density_i.txt")
+rho = np.genfromtxt("build_release/rho.txt")
 
-phi = np.genfromtxt("build/phi.txt")
-ef = np.genfromtxt("build/efield.txt")
+phi = np.genfromtxt("build_release/phi.txt")
+ef = np.genfromtxt("build_release/efield.txt")
 
 data_a = np.genfromtxt("data/Benchmark_A.csv", delimiter=' ')
 
@@ -95,7 +95,7 @@ plt.plot(x, count2dens(de, nx))
 # plt.scatter(pos_e, field_e)
 # plt.plot(x, ef, c='r')
 
-# ke_e = 
+# ke_e =
 
 
 
@@ -106,8 +106,8 @@ plt.plot(x, count2dens(de, nx))
 
 # plt.plot(rho)
 
-# phi_code = np.genfromtxt("build/phi.txt")
-# efield_code = np.genfromtxt("build/efield.txt")
+# phi_code = np.genfromtxt("build_release/phi.txt")
+# efield_code = np.genfromtxt("build_release/efield.txt")
 # print(out)
 
 
