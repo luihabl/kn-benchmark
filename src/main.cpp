@@ -52,21 +52,21 @@ void save_vec(const char* filename, const std::span<kn::core::Vec<1>>& v) {
     }
 }
 
-kn::collisions::CollisionReaction load_reaction(const char* path,
-                                                double energy_threshold,
-                                                kn::collisions::CollisionType ctype,
-                                                kn::collisions::CollisionProjectile projectile) {
-    kn::collisions::CollisionReaction coll;
-
-    rapidcsv::Document doc(path, rapidcsv::LabelParams(-1, -1), rapidcsv::SeparatorParams(';'));
-    coll.energy = doc.GetColumn<double>(0);
-    coll.cross_section = doc.GetColumn<double>(1);
-    coll.energy_threshold = energy_threshold;
-    coll.projectile = projectile;
-    coll.type = ctype;
-
-    return coll;
-}
+// kn::collisions::CollisionReaction load_reaction(const char* path,
+//                                                 double energy_threshold,
+//                                                 kn::collisions::CollisionType ctype,
+//                                                 kn::collisions::CollisionProjectile projectile) {
+//     kn::collisions::CollisionReaction coll;
+//
+//     rapidcsv::Document doc(path, rapidcsv::LabelParams(-1, -1), rapidcsv::SeparatorParams(';'));
+//     coll.energy = doc.GetColumn<double>(0);
+//     coll.cross_section = doc.GetColumn<double>(1);
+//     coll.energy_threshold = energy_threshold;
+//     coll.projectile = projectile;
+//     coll.type = ctype;
+//
+//     return coll;
+// }
 
 kn::collisions::CrossSection load_cross_section(const char* path, double energy_threshold) {
     kn::collisions::CrossSection cs;
@@ -104,37 +104,7 @@ int main() {
     double volt = 450.0;
     size_t ppc = 512;
     size_t n_steps = 512'000;
-    double pweight = n0 * l / (double)(ppc * (nx - 1));
-
-    kn::collisions::DomainConfig coll_config{};
-    coll_config.m_dt = dt;
-    coll_config.m_m_dx = dx;
-    coll_config.m_n_neutral = ng;
-    coll_config.m_t_neutral = tg;
-    coll_config.m_m_ion = m_he;
-    //
-    // using CType = kn::collisions::CollisionType;
-    // using CProj = kn::collisions::CollisionProjectile;
-    //
-    // auto el_cs = load_reaction("../data/Elastic_He.csv", 0.0, CType::Elastic, CProj::Electron);
-    // auto exc1_cs =
-    //     load_reaction("../data/Excitation1_He.csv", 19.82, CType::Excitation, CProj::Electron);
-    // auto exc2_cs =
-    //     load_reaction("../data/Excitation2_He.csv", 20.61, CType::Excitation, CProj::Electron);
-    // auto iz_cs =
-    //     load_reaction("../data/Ionization_He.csv", 24.59, CType::Ionization, CProj::Electron);
-    // auto iso_cs = load_reaction("../data/Isotropic_He.csv", 0.0, CType::Isotropic, CProj::Ion);
-    // auto bs_cs =
-    //     load_reaction("../data/Backscattering_He.csv", 0.0, CType::Backscattering, CProj::Ion);
-    //
-    // auto coll = kn::collisions::MonteCarloCollisions<1>(coll_config, {
-    //                                                                      std::move(el_cs),
-    //                                                                      std::move(exc1_cs),
-    //                                                                      std::move(exc2_cs),
-    //                                                                      std::move(iz_cs),
-    //                                                                      std::move(iso_cs),
-    //                                                                      std::move(bs_cs),
-    //                                                                  });
+    double particle_weight = n0 * l / static_cast<double>(ppc * (nx - 1));
 
     size_t n_initial = (nx - 1) * ppc;
 
@@ -201,14 +171,13 @@ int main() {
     auto ion_collisions = kn::collisions::MCCReactionSet(ions, std::move(ion_reaction_config));
 
     // Main loop
-
     std::cout << "starting" << std::endl;
 
     for (size_t i = 0; i < n_steps; i++) {
         kn::interpolate::weight_to_grid(electrons, electron_density);
         kn::interpolate::weight_to_grid(ions, ion_density);
 
-        kn::electromagnetics::charge_density(pweight, ion_density, electron_density, rho);
+        kn::electromagnetics::charge_density(particle_weight, ion_density, electron_density, rho);
 
         double vc = volt * std::sin(2.0 * kn::constants::pi * f * dt * static_cast<double>(i));
 
@@ -225,7 +194,6 @@ int main() {
         kn::particle::apply_absorbing_boundary(ions, 0, l);
 
         electron_collisions.react_all();
-        // coll.collide_ions(ions);
         ion_collisions.react_all();
 
         if (i > (n_steps - 12'800)) {

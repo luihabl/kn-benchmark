@@ -42,28 +42,32 @@ def calc_phi(rho):
 
     return np.concatenate(([0.0], res, [0.0]))
 
-pos_e = np.genfromtxt("build_release/pos_e.txt")
-v_e = np.genfromtxt("build_release/v_e.txt", delimiter=',')
-field_e = np.genfromtxt("build_release/field_e.txt")
-field_i = np.genfromtxt("build_release/field_i.txt")
-pos_i = np.genfromtxt("build_release/pos_i.txt")
-v_i = np.genfromtxt("build_release/v_i.txt", delimiter=',')
-de = np.genfromtxt("build_release/density_e.txt")
-di = np.genfromtxt("build_release/density_i.txt")
-rho = np.genfromtxt("build_release/rho.txt")
+def get_data(path):
+    # pos_e = np.genfromtxt(f"{path}/pos_e.txt")
+    # v_e = np.genfromtxt(f"{path}/v_e.txt", delimiter=',')
+    # field_e = np.genfromtxt(f"{path}/field_e.txt")
+    # field_i = np.genfromtxt(f"{path}/field_i.txt")
+    # pos_i = np.genfromtxt(f"{path}/pos_i.txt")
+    # v_i = np.genfromtxt(f"{path}/v_i.txt", delimiter=',')
+    de = np.genfromtxt(f"{path}/density_e.txt")
+    di = np.genfromtxt(f"{path}/density_i.txt")
+    # rho = np.genfromtxt(f"{path}/rho.txt")
 
-phi = np.genfromtxt("build_release/phi.txt")
-ef = np.genfromtxt("build_release/efield.txt")
+    # phi = np.genfromtxt(f"{path}/phi.txt")
+    # ef = np.genfromtxt(f"{path}/efield.txt")
+
+
+    # density_i = density(pos_i, nx)
+    # density_e = density(pos_e, nx)
+    # rho_local = e * (density_i - density_e)
+
+    return (count2dens(di, nx), count2dens(de, nx))
+
+d1 = get_data("build_release")
+d2 = get_data("build_release/res1")
 
 data_a = np.genfromtxt("data/Benchmark_A.csv", delimiter=' ')
-
-print(data_a)
-
-density_i = density(pos_i, nx)
-density_e = density(pos_e, nx)
-rho_local = e * (density_i - density_e)
-
-x = np.linspace(0, L, density_i.size)
+x = np.linspace(0, L, d1[0].size)
 
 # ke_e = 0.5 * m_e * (v_e[:, 0]**2 + v_e[:, 1]**2 + v_e[0, 2]**2) / e
 # print(np.mean(ke_e))
@@ -84,8 +88,11 @@ density_i_b = data_a[:, 4]
 plt.plot(xb, density_e_b, ls='--')
 plt.plot(xb, density_i_b, ls='--')
 
-plt.plot(x, count2dens(di, nx))
-plt.plot(x, count2dens(de, nx))
+plt.plot(x, d1[0])
+plt.plot(x, d1[1])
+
+plt.plot(x, d2[0])
+plt.plot(x, d2[1])
 
 # plt.plot(rho_local)
 # plt.plot(rho)
@@ -106,8 +113,8 @@ plt.plot(x, count2dens(de, nx))
 
 # plt.plot(rho)
 
-# phi_code = np.genfromtxt("build_release/phi.txt")
-# efield_code = np.genfromtxt("build_release/efield.txt")
+# phi_code = np.genfromtxt(f"{path}/phi.txt")
+# efield_code = np.genfromtxt(f"{path}/efield.txt")
 # print(out)
 
 
@@ -130,4 +137,8 @@ plt.plot(x, count2dens(de, nx))
 
 # plt.plot(np.gradient(phi, dx))
 
+plt.show()
+
+plt.plot(d1[0] - d2[0])
+plt.plot(d1[1] - d2[1])
 plt.show()
